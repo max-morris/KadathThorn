@@ -75,6 +75,22 @@ set (FFTW_LIBRARIES ${FFTW3_LIBS})
 set (BLAS_LIBRARIES ${BLAS_LIBS})
 
 EOF
+# FUKA's CMake does not search for Boost (or the other libraries) itself: it
+# only sees what is on the compiler's default include path. Forward the
+# include/library directories Cactus already resolved for the thorns this
+# thorn REQUIRES, so a Boost/GSL/FFTW3 living under a non-system prefix
+# (a site "externals" tree, or one built by the ExternalLibraries thorns)
+# is found by the nested CMake build too.
+for dirs in "${BOOST_INC_DIRS}" "${GSL_INC_DIRS}" "${FFTW3_INC_DIRS}" "${LAPACK_INC_DIRS}" "${BLAS_INC_DIRS}"; do
+    if [ -n "${dirs}" ]; then
+        echo "include_directories(${dirs})" >> ${HOME_KADATH}/Cmake/CMakeLocal.cmake
+    fi
+done
+for dirs in "${BOOST_LIB_DIRS}" "${GSL_LIB_DIRS}" "${FFTW3_LIB_DIRS}" "${LAPACK_LIB_DIRS}" "${BLAS_LIB_DIRS}"; do
+    if [ -n "${dirs}" ]; then
+        echo "link_directories(${dirs})" >> ${HOME_KADATH}/Cmake/CMakeLocal.cmake
+    fi
+done
 
 # Maybe this should only be for verbose/debug?
 echo "KadathThorn: CMAKELIST is"
@@ -94,8 +110,12 @@ sed -i -e  '/newton/d' ../CMakeLists.txt
 # Ensure this macro is defined at build time to enable multi-threaded importers
 sed -i -E 's%// #define DEFAULT_KAD_MEM%#define DEFAULT_KAD_MEM%' ${HOME_KADATH}/include/memory.hpp
 
-# Generate Makefile based on CMakeLocal.cmake settings
-cmake -DPAR_VERSION=ON -DCMAKE_BUILD_TYPE=Release ..
+# Generate Makefile based on CMakeLocal.cmake settings.
+# Since ET_2026_05 FUKA's CMakeLists prepends CMAKE_CXX_FLAGS to its release
+# flags, and CMake seeds CMAKE_CXX_FLAGS from the CXXFLAGS that Cactus exports
+# (e.g. -mavx512* -mfma -fopenmp). Build FUKA with its own flags
+# (-g -O3 -std=c++17), as every release before ET_2026_05 did.
+cmake -DCMAKE_CXX_FLAGS="" -DPAR_VERSION=ON -DCMAKE_BUILD_TYPE=Release ..
 
 echo "KadathThorn: Building Frankfurt University/KADATH library..."
 # Compile and build library $HOME_KADATH/lib/libkadath.a
