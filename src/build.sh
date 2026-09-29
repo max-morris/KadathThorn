@@ -100,8 +100,12 @@ cd ${HOME_KADATH}/build_release
 mkdir -p build
 cd build
 
-# Generate Makefile based on CMakeLocal.cmake settings
-cmake -DPAR_VERSION=ON -DCMAKE_BUILD_TYPE=Release ..
+# Generate Makefile based on CMakeLocal.cmake settings.
+# Since ET_2026_05 FUKA's CMakeLists prepends CMAKE_CXX_FLAGS to its release
+# flags, and CMake seeds CMAKE_CXX_FLAGS from the CXXFLAGS that Cactus exports
+# (e.g. -mavx512* -mfma -fopenmp). Build FUKA with its own flags
+# (-g -O3 -std=c++17), as every release before ET_2026_05 did.
+cmake -DCMAKE_CXX_FLAGS="" -DPAR_VERSION=ON -DCMAKE_BUILD_TYPE=Release ..
 
 echo "KadathThorn: Building Frankfurt University/KADATH library..."
 # Compile and build library $HOME_KADATH/lib/libkadath.a
